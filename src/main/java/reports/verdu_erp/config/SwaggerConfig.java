@@ -30,7 +30,7 @@ public class SwaggerConfig {
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
                         new Server()
-                                .url("http://localhost:8081")
+                                .url("https://homo-jasper.verderp.com.br")
                                 .description("Servidor de Desenvolvimento"),
                         new Server()
                                 .url("https://api.verdu.com")

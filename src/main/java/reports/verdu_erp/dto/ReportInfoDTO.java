@@ -9,6 +9,9 @@ import java.time.ZonedDateTime;
 @Schema(description = "DTO para informações de relatórios disponíveis")
 public class ReportInfoDTO {
     
+    @Schema(description = "Código do relatório", example = "REL_VENDAS")
+    private String codigo;
+
     @Schema(description = "Nome do relatório", example = "relatorio_vendas.jrxml")
     private String name;
     
@@ -23,11 +26,20 @@ public class ReportInfoDTO {
     
     public ReportInfoDTO() {}
     
-    public ReportInfoDTO(String name, long size, ZonedDateTime lastModified, String etag) {
+    public ReportInfoDTO(String codigo, String name, long size, ZonedDateTime lastModified, String etag) {
+        this.codigo = codigo;
         this.name = name;
         this.size = size;
         this.lastModified = lastModified;
         this.etag = etag;
+    }
+    
+    public String getCodigo() {
+        return codigo;
+    }
+    
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
     }
     
     public String getName() {

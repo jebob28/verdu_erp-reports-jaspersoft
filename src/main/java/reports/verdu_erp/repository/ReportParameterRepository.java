@@ -21,4 +21,8 @@ public interface ReportParameterRepository extends JpaRepository<ReportParameter
     void deleteByReportId(Long reportId);
     
     boolean existsByReportIdAndParameterName(Long reportId, String parameterName);
+
+    ReportParameter findByReportIdAndParameterName(Long reportId, String parameterName);
+
+    void deleteByReportIdAndParameterName(Long reportId, String parameterName);
 }
