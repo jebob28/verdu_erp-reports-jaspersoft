@@ -24,6 +24,9 @@ public class ReportInfoDTO {
     @Schema(description = "ETag do arquivo", example = "d41d8cd98f00b204e9800998ecf8427e")
     private String etag;
     
+    @Schema(description = "Setor do relatório", example = "logistica")
+    private String setor;
+    
     public ReportInfoDTO() {}
     
     public ReportInfoDTO(String codigo, String name, long size, ZonedDateTime lastModified, String etag) {
@@ -32,6 +35,15 @@ public class ReportInfoDTO {
         this.size = size;
         this.lastModified = lastModified;
         this.etag = etag;
+    }
+    
+    public ReportInfoDTO(String codigo, String name, long size, ZonedDateTime lastModified, String etag, String setor) {
+        this.codigo = codigo;
+        this.name = name;
+        this.size = size;
+        this.lastModified = lastModified;
+        this.etag = etag;
+        this.setor = setor;
     }
     
     public String getCodigo() {
@@ -72,5 +84,13 @@ public class ReportInfoDTO {
     
     public void setEtag(String etag) {
         this.etag = etag;
+    }
+    
+    public String getSetor() {
+        return setor;
+    }
+    
+    public void setSetor(String setor) {
+        this.setor = setor;
     }
 }

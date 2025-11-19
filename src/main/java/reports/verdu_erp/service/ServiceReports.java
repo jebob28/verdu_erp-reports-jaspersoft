@@ -27,7 +27,9 @@ import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperExportManager;
 import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.JasperPrintManager;
 import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.JRParameter;
 import net.sf.jasperreports.engine.export.HtmlExporter;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
 import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
@@ -79,7 +81,7 @@ public class ServiceReports {
      * e salva os metadados no banco de dados
      */
     @Transactional
-    public void uploadReport(String reportName, MultipartFile file, String codigo, String descricao, List<ReportParameterCreateDTO> parametros) throws Exception {
+    public void uploadReport(String reportName, MultipartFile file, String codigo, String descricao, List<ReportParameterCreateDTO> parametros, String setor) throws Exception {
         // Validar parâmetros antes de processar
         validateReportParameters(parametros);
         
@@ -102,6 +104,9 @@ public class ServiceReports {
          report.setCodigo(codigo);
          report.setContentType(file.getContentType());
          report.setFileSize(file.getSize());
+         if (setor != null && !setor.trim().isEmpty()) {
+             report.setSector(setor);
+         }
          
          // Salva o relatório
          Report savedReport = reportRepository.save(report);
@@ -116,6 +121,28 @@ public class ServiceReports {
          }
          
 
+    }
+
+    /**
+     * Define/atualiza o setor de um relatório identificado por código ou nome
+     */
+    @Transactional
+    public boolean setReportSector(String codeOrName, String setor) {
+        if (codeOrName == null || codeOrName.trim().isEmpty()) return false;
+        if (setor == null || setor.trim().isEmpty()) return false;
+
+        Optional<Report> byCode = reportRepository.findByCodigo(codeOrName);
+        Optional<Report> byName = Optional.empty();
+        if (byCode.isEmpty()) {
+            byName = reportRepository.findByNameIgnoreCase(codeOrName);
+        }
+        Optional<Report> target = byCode.isPresent() ? byCode : byName;
+        if (target.isEmpty()) return false;
+
+        Report r = target.get();
+        r.setSector(setor);
+        reportRepository.save(r);
+        return true;
     }
     
     /**
@@ -231,12 +258,60 @@ public class ServiceReports {
      * Gera relatório em formato específico
      */
     public byte[] generateReport(String reportName, Map<String, Object> parameters, String format) throws Exception {
+        JasperPrint jasperPrint = prepareJasperPrint(reportName, parameters);
+
+        // Exporta no formato solicitado
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        switch (format.toLowerCase()) {
+            case "pdf":
+                // Configurações para melhor suporte a fontes no PDF
+                System.setProperty("net.sf.jasperreports.awt.ignore.missing.font", "true");
+                System.setProperty("net.sf.jasperreports.default.font.name", "DejaVu Sans");
+                System.setProperty("net.sf.jasperreports.default.pdf.font.name", "DejaVu Sans");
+                System.setProperty("net.sf.jasperreports.default.pdf.encoding", "UTF-8");
+                System.setProperty("net.sf.jasperreports.default.pdf.embedded", "true");
+
+                JasperExportManager.exportReportToPdfStream(jasperPrint, outputStream);
+                break;
+            case "html":
+                HtmlExporter htmlExporter = new HtmlExporter();
+                htmlExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                htmlExporter.setExporterOutput(new SimpleHtmlExporterOutput(outputStream));
+                htmlExporter.exportReport();
+                break;
+            case "csv":
+                JRCsvExporter csvExporter = new JRCsvExporter();
+                csvExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                csvExporter.setExporterOutput(new SimpleWriterExporterOutput(outputStream));
+                csvExporter.exportReport();
+                break;
+            case "xml":
+                JasperExportManager.exportReportToXmlStream(jasperPrint, outputStream);
+                break;
+            case "xlsx":
+                JRXlsxExporter xlsxExporter = new JRXlsxExporter();
+                xlsxExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                xlsxExporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outputStream));
+                xlsxExporter.exportReport();
+                break;
+            default:
+                throw new IllegalArgumentException("Formato não suportado: " + format);
+        }
+
+        return outputStream.toByteArray();
+    }
+
+    /**
+     * Prepara e preenche um JasperPrint reutilizável, aplicando normalização e alinhamento de tipos.
+     */
+    public JasperPrint prepareJasperPrint(String reportName, Map<String, Object> parameters) throws Exception {
         System.out.println("[DEBUG] Iniciando geração do relatório: " + reportName);
         System.out.println("[DEBUG] Parâmetros recebidos: " + parameters);
-        
+
         // Baixa o arquivo do relatório do MinIO
         InputStream reportStream = downloadReport(reportName);
-        
+
         // Compila o relatório se for .jrxml
         JasperReport jasperReport;
         if (reportName.endsWith(".jrxml")) {
@@ -244,16 +319,16 @@ public class ServiceReports {
         } else {
             jasperReport = (JasperReport) JRLoader.loadObject(reportStream);
         }
-        
+
         System.out.println("[DEBUG] Relatório compilado/carregado com sucesso");
-        
+
         // Aplica conversões automáticas SEMPRE para parâmetros conhecidos
         if (parameters != null) {
             Map<String, Object> normalized = new java.util.HashMap<>(parameters);
             for (Map.Entry<String, Object> entry : parameters.entrySet()) {
                 String key = entry.getKey();
                 Object value = entry.getValue();
-                
+
                 // Conversão automática para parâmetros que terminam com _ID
                 if (key.endsWith("_ID") && value instanceof Number) {
                     normalized.put(key, ((Number) value).longValue());
@@ -302,56 +377,122 @@ public class ServiceReports {
             e.printStackTrace();
         }
 
+        // Ajuste final: alinhar tipos com JRXML (JasperReport) quando possível
+        try {
+            Map<String, Class<?>> jrParamTypes = extractJasperParameterTypes(jasperReport);
+            if (parameters != null && !parameters.isEmpty() && jrParamTypes != null && !jrParamTypes.isEmpty()) {
+                Map<String, Object> aligned = new java.util.HashMap<>(parameters);
+                for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+                    String key = entry.getKey();
+                    Object val = entry.getValue();
+                    Class<?> target = jrParamTypes.get(key);
+                    if (target != null) {
+                        Object conv = convertToTargetClass(target, val);
+                        aligned.put(key, conv);
+                        System.out.println("[DEBUG] Alinhado pelo JRXML: " + key + " -> " + target.getName() + " (classe original: " + (val != null ? val.getClass().getName() : "null") + ")");
+                    }
+                }
+                parameters = aligned;
+                System.out.println("[DEBUG] Parâmetros alinhados ao JRXML: " + parameters);
+            }
+        } catch (Exception e2) {
+            System.out.println("[WARN] Falha ao alinhar tipos com JRXML: " + e2.getMessage());
+            e2.printStackTrace();
+        }
+
         System.out.println("[DEBUG] Iniciando preenchimento do relatório com JasperFillManager");
         System.out.println("[DEBUG] Parâmetros finais para JasperFillManager: " + parameters);
-        
+
         // Preenche o relatório com dados
         Connection connection = dataSource.getConnection();
         JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parameters, connection);
         connection.close();
-        
+
         System.out.println("[DEBUG] Relatório preenchido com sucesso");
-        
-        // Exporta no formato solicitado
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        
-        switch (format.toLowerCase()) {
-            case "pdf":
-                // Configurações para melhor suporte a fontes no PDF
-                System.setProperty("net.sf.jasperreports.awt.ignore.missing.font", "true");
-                System.setProperty("net.sf.jasperreports.default.font.name", "DejaVu Sans");
-                System.setProperty("net.sf.jasperreports.default.pdf.font.name", "DejaVu Sans");
-                System.setProperty("net.sf.jasperreports.default.pdf.encoding", "UTF-8");
-                System.setProperty("net.sf.jasperreports.default.pdf.embedded", "true");
-                
-                JasperExportManager.exportReportToPdfStream(jasperPrint, outputStream);
-                break;
-            case "html":
-                HtmlExporter htmlExporter = new HtmlExporter();
-                htmlExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
-                htmlExporter.setExporterOutput(new SimpleHtmlExporterOutput(outputStream));
-                htmlExporter.exportReport();
-                break;
-            case "csv":
-                JRCsvExporter csvExporter = new JRCsvExporter();
-                csvExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
-                csvExporter.setExporterOutput(new SimpleWriterExporterOutput(outputStream));
-                csvExporter.exportReport();
-                break;
-            case "xml":
-                JasperExportManager.exportReportToXmlStream(jasperPrint, outputStream);
-                break;
-            case "xlsx":
-                JRXlsxExporter xlsxExporter = new JRXlsxExporter();
-                xlsxExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
-                xlsxExporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outputStream));
-                xlsxExporter.exportReport();
-                break;
-            default:
-                throw new IllegalArgumentException("Formato não suportado: " + format);
+
+        return jasperPrint;
+    }
+
+    /**
+     * Imprime diretamente no serviço de impressão padrão do servidor sem diálogo.
+     */
+    public void printReport(String reportName, Map<String, Object> parameters) throws Exception {
+        JasperPrint jasperPrint = prepareJasperPrint(reportName, parameters);
+        // false -> sem diálogo
+        JasperPrintManager.printReport(jasperPrint, false);
+    }
+
+    /**
+     * Extrai o mapa nome->classe dos parâmetros definidos no JasperReport (JRXML).
+     */
+    private Map<String, Class<?>> extractJasperParameterTypes(JasperReport jasperReport) {
+        Map<String, Class<?>> map = new java.util.HashMap<>();
+        if (jasperReport == null) return map;
+        for (JRParameter p : jasperReport.getParameters()) {
+            try {
+                if (p != null && !p.isSystemDefined() && p.getName() != null && p.getValueClass() != null) {
+                    map.put(p.getName(), p.getValueClass());
+                }
+            } catch (Exception ignored) {
+            }
         }
-        
-        return outputStream.toByteArray();
+        return map;
+    }
+
+    /**
+     * Converte um valor para a classe alvo informada, com suporte básico a coleções.
+     */
+    private Object convertToTargetClass(Class<?> target, Object value) {
+        if (value == null || target == null) return value;
+        try {
+            // Se já é instância da classe alvo, mantém
+            if (target.isInstance(value)) return value;
+
+            // Se alvo é Collection, garante que valor seja uma Collection/Lista
+            if (java.util.Collection.class.isAssignableFrom(target)) {
+                if (value instanceof java.util.Collection<?>) return value;
+                if (value.getClass().isArray()) {
+                    int length = java.lang.reflect.Array.getLength(value);
+                    java.util.List<Object> converted = new java.util.ArrayList<>(length);
+                    for (int i = 0; i < length; i++) {
+                        converted.add(java.lang.reflect.Array.get(value, i));
+                    }
+                    return converted;
+                }
+                // valor único vira lista com 1 elemento
+                return java.util.List.of(value);
+            }
+
+            // Mapeia classe para nossa string de tipo e reutiliza convertSingleValue
+            String type;
+            if (target.equals(Integer.class) || "int".equals(target.getName())) {
+                type = "Integer";
+            } else if (target.equals(Long.class) || "long".equals(target.getName())) {
+                type = "Long";
+            } else if (target.equals(Double.class) || "double".equals(target.getName())) {
+                type = "Double";
+            } else if (target.equals(java.math.BigDecimal.class)) {
+                type = "BigDecimal";
+            } else if (target.equals(Boolean.class) || "boolean".equals(target.getName())) {
+                type = "Boolean";
+            } else if (target.equals(java.util.Date.class)) {
+                type = "DATE";
+            } else if (target.equals(java.sql.Date.class)) {
+                type = "DATE";
+            } else if (target.equals(java.sql.Timestamp.class)) {
+                type = "DATETIME";
+            } else if (target.equals(String.class)) {
+                type = "String";
+            } else {
+                // Classe desconhecida: retorna como string (fail-soft)
+                return value.toString();
+            }
+
+            return convertSingleValue(type, value);
+        } catch (Exception e) {
+            System.out.println("[WARN] Falha ao converter para classe alvo '" + target.getName() + "' valor '" + value + "': " + e.getMessage());
+            return value;
+        }
     }
 
     /**
@@ -360,13 +501,36 @@ public class ServiceReports {
     private Object convertParameterValue(String parameterType, Object value) {
         if (value == null) return null;
         String type = parameterType != null ? parameterType.trim() : "String";
-        
+
         System.out.println("[DEBUG] Convertendo parâmetro - Tipo: " + type + ", Valor: " + value + " (Classe: " + value.getClass().getSimpleName() + ")");
-        
+
+        // Suporte para listas: se o valor for Collection ou array, converte cada item
+        if (value instanceof java.util.Collection<?>) {
+            java.util.List<Object> converted = new java.util.ArrayList<>();
+            for (Object item : (java.util.Collection<?>) value) {
+                converted.add(convertSingleValue(type, item));
+            }
+            return converted;
+        }
+        if (value.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(value);
+            java.util.List<Object> converted = new java.util.ArrayList<>(length);
+            for (int i = 0; i < length; i++) {
+                Object item = java.lang.reflect.Array.get(value, i);
+                converted.add(convertSingleValue(type, item));
+            }
+            return converted;
+        }
+
+        return convertSingleValue(type, value);
+    }
+
+    private Object convertSingleValue(String type, Object value) {
         try {
             Object result;
             switch (type) {
                 case "Integer":
+                case "INTEGER":
                     if (value instanceof Number) {
                         result = ((Number) value).intValue();
                     } else {
@@ -374,12 +538,7 @@ public class ServiceReports {
                     }
                     break;
                 case "Long":
-                    if (value instanceof Number) {
-                        result = ((Number) value).longValue();
-                    } else {
-                        result = Long.valueOf(value.toString());
-                    }
-                    break;
+                case "LONG":
                 case "java.lang.Long":
                     if (value instanceof Number) {
                         result = ((Number) value).longValue();
@@ -388,6 +547,7 @@ public class ServiceReports {
                     }
                     break;
                 case "Double":
+                case "DOUBLE":
                     if (value instanceof Number) {
                         result = ((Number) value).doubleValue();
                     } else {
@@ -395,6 +555,7 @@ public class ServiceReports {
                     }
                     break;
                 case "BigDecimal":
+                case "DECIMAL":
                     if (value instanceof java.math.BigDecimal) {
                         result = value;
                     } else {
@@ -402,6 +563,7 @@ public class ServiceReports {
                     }
                     break;
                 case "Boolean":
+                case "BOOLEAN":
                     if (value instanceof Boolean) {
                         result = value;
                     } else {
@@ -410,15 +572,16 @@ public class ServiceReports {
                     }
                     break;
                 case "Date":
+                case "DATE":
                     if (value instanceof java.util.Date) {
                         result = value;
                     } else {
-                        // tenta ISO yyyy-MM-dd
                         java.time.LocalDate ld = java.time.LocalDate.parse(value.toString());
                         result = java.sql.Date.valueOf(ld);
                     }
                     break;
                 case "Timestamp":
+                case "DATETIME":
                     if (value instanceof java.util.Date) {
                         result = new java.sql.Timestamp(((java.util.Date) value).getTime());
                     } else {
@@ -426,16 +589,17 @@ public class ServiceReports {
                         result = java.sql.Timestamp.valueOf(ldt);
                     }
                     break;
+                case "String":
+                case "STRING":
+                    result = value.toString();
+                    break;
                 default:
                     result = value.toString();
                     break;
             }
-            
             System.out.println("[DEBUG] Conversão bem-sucedida - Resultado: " + result + " (Classe: " + result.getClass().getSimpleName() + ")");
             return result;
-            
         } catch (Exception e) {
-            // Retorna string para não quebrar geração; ideal registrar
             System.out.println("[WARN] Conversão falhou para tipo " + type + " e valor " + value + ": " + e.getMessage());
             return value.toString();
         }
@@ -478,9 +642,26 @@ public class ServiceReports {
         entity.setDefaultValue(dto.getDefaultValue());
         entity.setIsRequired(Boolean.TRUE.equals(dto.getIsRequired()));
         entity.setDescription(dto.getDescription());
+        // Propagar metadata JSON (string) se fornecido
+        // Validar e normalizar metadata como JSON válido
+        String metadata = dto.getMetadata();
+        if (metadata != null && !metadata.trim().isEmpty()) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode node;
+                // Se metadata vier como objeto JSON já serializado, valida parse
+                node = mapper.readTree(metadata.trim());
+                // Normaliza para string compacta
+                entity.setMetadata(mapper.writeValueAsString(node));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Metadata inválida: deve ser JSON válido. Erro: " + e.getMessage());
+            }
+        } else {
+            entity.setMetadata(null);
+        }
 
         ReportParameter saved = reportParameterRepository.save(entity);
-        return new ReportParameterDTO(
+        ReportParameterDTO resultDto = new ReportParameterDTO(
             saved.getId(),
             saved.getParameterName(),
             saved.getParameterType(),
@@ -489,6 +670,8 @@ public class ServiceReports {
             saved.getDescription(),
             saved.getCreatedAt()
         );
+        resultDto.setMetadata(saved.getMetadata());
+        return resultDto;
     }
 
     @Transactional
@@ -549,7 +732,8 @@ public class ServiceReports {
     public Optional<ReportWithParametersDTO> findReportWithParametersByCode(String code) {
         try {
             System.out.println("[DEBUG] Buscando relatório com código: " + code);
-            Optional<Report> reportOpt = reportRepository.findByCodigo(code);
+            String normalizedCode = normalizeCode(code);
+            Optional<Report> reportOpt = reportRepository.findByCodigoIgnoreCase(normalizedCode);
             
             if (!reportOpt.isPresent()) {
                 System.out.println("[DEBUG] Relatório não encontrado com código: " + code);
@@ -559,7 +743,17 @@ public class ServiceReports {
             System.out.println("[DEBUG] Relatório encontrado: " + reportOpt.get().getName());
             
             // Se encontrou o relatório, busca novamente com parâmetros carregados
-            reportOpt = reportRepository.findByNameWithParameters(reportOpt.get().getName());
+            // Busca novamente com parâmetros carregados, normalizando nome
+            String name = reportOpt.get().getName();
+            Optional<Report> byName = reportRepository.findByNameWithParameters(name);
+            if (!byName.isPresent()) {
+                byName = reportRepository.findByNameIgnoreCase(name);
+                if (byName.isPresent()) {
+                    // reforça fetch dos parâmetros
+                    byName = reportRepository.findByNameWithParameters(byName.get().getName());
+                }
+            }
+            reportOpt = byName;
             
             if (reportOpt.isPresent()) {
             Report report = reportOpt.get();
@@ -577,6 +771,7 @@ public class ServiceReports {
                         param.getDescription(),
                         param.getCreatedAt()
                     );
+                    paramDTO.setMetadata(param.getMetadata());
                     parameterDTOs.add(paramDTO);
                 }
             }
@@ -605,6 +800,17 @@ public class ServiceReports {
             return Optional.empty();
         }
      }
+
+    private String normalizeCode(String code) {
+        if (code == null) return null;
+        // remove extensão caso venha com .jasper/.jrxml, remove espaços e normaliza acentos
+        String withoutExt = code.replaceAll("\\.(jasper|jrxml)$", "");
+        String trimmed = withoutExt.trim();
+        // normaliza acentos
+        String normalized = java.text.Normalizer.normalize(trimmed, java.text.Normalizer.Form.NFD)
+            .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return normalized;
+    }
 
     /**
      * Valida os parâmetros de um relatório antes de salvá-los
@@ -653,64 +859,66 @@ public class ServiceReports {
     /**
      * Lista relatórios organizados por setor
      */
-    public Map<String, List<String>> listReportsBySector() {
-        Map<String, List<String>> reportsBySector = new java.util.HashMap<>();
-        
-        // Inicializa as listas para cada setor
-        reportsBySector.put("logistica", new ArrayList<>());
-        reportsBySector.put("financeiro", new ArrayList<>());
-        reportsBySector.put("compras", new ArrayList<>());
-        reportsBySector.put("comercial", new ArrayList<>());
-        reportsBySector.put("estoque", new ArrayList<>());
-        reportsBySector.put("geral", new ArrayList<>());
-        
-        try {
-            // Lista arquivos de cada pasta de setor
-            java.io.File reportsDir = new java.io.File("relatorios");
-            if (reportsDir.exists() && reportsDir.isDirectory()) {
-                for (java.io.File sectorDir : reportsDir.listFiles()) {
-                    if (sectorDir.isDirectory()) {
-                        String sectorName = sectorDir.getName();
-                        List<String> reports = new ArrayList<>();
-                        
-                        for (java.io.File reportFile : sectorDir.listFiles()) {
-                            if (reportFile.isFile() && reportFile.getName().endsWith(".jrxml")) {
-                                reports.add(reportFile.getName());
-                            }
-                        }
-                        
-                        reportsBySector.put(sectorName, reports);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("[ERROR] Erro ao listar relatórios por setor: " + e.getMessage());
-            e.printStackTrace();
+    public Map<String, List<reports.verdu_erp.dto.ReportInfoDTO>> listReportsBySector() {
+        Map<String, List<reports.verdu_erp.dto.ReportInfoDTO>> bySector = new java.util.HashMap<>();
+
+        List<Report> reports = reportRepository.findAllOrderByCreatedAtDesc();
+        for (Report r : reports) {
+            String sector = (r.getSector() != null && !r.getSector().trim().isEmpty()) ? r.getSector() : inferSector(r);
+            if (sector == null || sector.trim().isEmpty()) sector = "SEM_SETOR";
+            List<reports.verdu_erp.dto.ReportInfoDTO> arr = bySector.computeIfAbsent(sector, k -> new ArrayList<>());
+            arr.add(new reports.verdu_erp.dto.ReportInfoDTO(
+                r.getCodigo(),
+                r.getName(),
+                r.getFileSize() != null ? r.getFileSize() : 0L,
+                r.getCreatedAt() != null ? r.getCreatedAt().atZone(java.time.ZoneId.systemDefault()) : java.time.ZonedDateTime.now(),
+                r.getId().toString(),
+                sector
+            ));
         }
-        
-        return reportsBySector;
+        return bySector;
+    }
+
+    private String inferSector(Report r) {
+        // Estratégia: tenta pelo código prefixado, senão por nome contendo pista, senão geral
+        String codigo = r.getCodigo() != null ? r.getCodigo().toLowerCase() : "";
+        String name = r.getName() != null ? r.getName().toLowerCase() : "";
+        String desc = r.getDescription() != null ? r.getDescription().toLowerCase() : "";
+        if (codigo.startsWith("log_")) return "logistica";
+        if (codigo.startsWith("fin_")) return "financeiro";
+        if (codigo.startsWith("cmp_")) return "compras";
+        if (codigo.startsWith("com_")) return "comercial";
+        if (codigo.startsWith("est_")) return "estoque";
+        // pistas por nome/descrição
+        if (name.contains("logistica") || desc.contains("logistica")) return "logistica";
+        if (name.contains("financeiro") || desc.contains("financeiro")) return "financeiro";
+        if (name.contains("compras") || desc.contains("compras")) return "compras";
+        if (name.contains("comercial") || desc.contains("comercial")) return "comercial";
+        if (name.contains("estoque") || desc.contains("estoque")) return "estoque";
+        return "geral";
     }
 
     /**
      * Lista relatórios de um setor específico
      */
-    public List<String> listReportsBySector(String sector) {
-        List<String> reports = new ArrayList<>();
-        
-        try {
-            java.io.File sectorDir = new java.io.File("relatorios/" + sector);
-            if (sectorDir.exists() && sectorDir.isDirectory()) {
-                for (java.io.File reportFile : sectorDir.listFiles()) {
-                    if (reportFile.isFile() && reportFile.getName().endsWith(".jrxml")) {
-                        reports.add(reportFile.getName());
-                    }
-                }
+    public List<reports.verdu_erp.dto.ReportInfoDTO> listReportsBySector(String sector) {
+        List<reports.verdu_erp.dto.ReportInfoDTO> result = new ArrayList<>();
+        String normalizedSector = sector == null ? "SEM_SETOR" : sector;
+
+        List<Report> reports = reportRepository.findAllOrderByCreatedAtDesc();
+        for (Report r : reports) {
+            String rsector = (r.getSector() != null && !r.getSector().trim().isEmpty()) ? r.getSector() : inferSector(r);
+            if (normalizedSector.equals(rsector)) {
+                result.add(new reports.verdu_erp.dto.ReportInfoDTO(
+                    r.getCodigo(),
+                    r.getName(),
+                    r.getFileSize() != null ? r.getFileSize() : 0L,
+                    r.getCreatedAt() != null ? r.getCreatedAt().atZone(java.time.ZoneId.systemDefault()) : java.time.ZonedDateTime.now(),
+                    r.getId().toString(),
+                    rsector
+                ));
             }
-        } catch (Exception e) {
-            System.out.println("[ERROR] Erro ao listar relatórios do setor " + sector + ": " + e.getMessage());
-            e.printStackTrace();
         }
-        
-        return reports;
+        return result;
     }
 }

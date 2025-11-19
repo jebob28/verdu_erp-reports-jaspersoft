@@ -15,6 +15,9 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     Optional<Report> findByName(String name);
     
     Optional<Report> findByCodigo(String codigo);
+
+    @Query("SELECT r FROM Report r WHERE LOWER(r.codigo) = LOWER(:codigo)")
+    Optional<Report> findByCodigoIgnoreCase(@Param("codigo") String codigo);
     
     boolean existsByName(String name);
     
@@ -22,6 +25,9 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     
     @Query("SELECT r FROM Report r LEFT JOIN FETCH r.parameters WHERE r.name = :name")
     Optional<Report> findByNameWithParameters(@Param("name") String name);
+
+    @Query("SELECT r FROM Report r WHERE LOWER(r.name) = LOWER(:name)")
+    Optional<Report> findByNameIgnoreCase(@Param("name") String name);
     
     @Query("SELECT r FROM Report r ORDER BY r.createdAt DESC")
     List<Report> findAllOrderByCreatedAtDesc();

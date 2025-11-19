@@ -1,8 +1,18 @@
 package reports.verdu_erp.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "rp_reports")
@@ -20,7 +30,9 @@ public class Report {
     
     @Column(name = "description")
     private String description;
-    
+
+    @Column(name = "sector")
+    private String sector;
 
     
     @Column(name = "content_type")
@@ -74,6 +86,14 @@ public class Report {
     
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getSector() {
+        return sector;
+    }
+
+    public void setSector(String sector) {
+        this.sector = sector;
     }
     
     public String getCodigo() {

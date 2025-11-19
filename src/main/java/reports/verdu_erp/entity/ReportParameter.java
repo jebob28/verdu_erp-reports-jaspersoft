@@ -2,6 +2,7 @@ package reports.verdu_erp.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.Type;
 
 @Entity
 @Table(name = "rp_report_parameters")
@@ -25,6 +26,11 @@ public class ReportParameter {
     
     @Column(name = "description")
     private String description;
+
+    // Metadata em JSON para opções avançadas de parâmetros (ex.: select options)
+    // Persistido como JSONB no PostgreSQL
+    @Column(name = "metadata", columnDefinition = "jsonb")
+    private String metadata;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -92,6 +98,14 @@ public class ReportParameter {
     
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(String metadata) {
+        this.metadata = metadata;
     }
     
     public LocalDateTime getCreatedAt() {

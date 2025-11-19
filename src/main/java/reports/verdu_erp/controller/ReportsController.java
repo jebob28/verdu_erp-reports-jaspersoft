@@ -127,6 +127,8 @@ public class ReportsController {
             @RequestParam(value = "codigo", required = false) String codigo,
             @Parameter(description = "Descrição do relatório", required = false, example = "Relatório de vendas mensais")
             @RequestParam(value = "descricao", required = false) String descricao,
+            @Parameter(description = "Setor do relatório", required = false, example = "logistica")
+            @RequestParam(value = "setor", required = false) String setor,
             @Parameter(
                 description = "Parâmetros do relatório (lista/objeto/mapa)",
                 required = false,
@@ -165,8 +167,8 @@ public class ReportsController {
             // Preparar parâmetros flexíveis (lista, objeto único ou mapa)
             List<ReportParameterCreateDTO> parametros = parseFlexibleParameters(parametrosRaw, codigo, reportName);
 
-            // Faz upload do relatório
-            serviceReports.uploadReport(reportName, file, codigo, descricao, (parametros == null || parametros.isEmpty()) ? null : parametros);
+            // Faz upload do relatório com setor opcional
+            serviceReports.uploadReport(reportName, file, codigo, descricao, (parametros == null || parametros.isEmpty()) ? null : parametros, setor);
             
             return ResponseEntity.ok(ReportUploadResponseDTO.success(reportName));
             
@@ -269,6 +271,17 @@ public class ReportsController {
             if (desc == null) desc = getString(node, "descricao");
             dto.setDescription(desc);
 
+            // Captura metadata/opções avançadas (JSON em string)
+            com.fasterxml.jackson.databind.JsonNode metadataNode = node.get("metadata");
+            if (metadataNode == null) metadataNode = node.get("opcoes"); // alias em pt-br
+            if (metadataNode != null && !metadataNode.isNull()) {
+                try {
+                    // Se já for texto, usa direto; se for objeto/array, serializa
+                    String metadataStr = metadataNode.isTextual() ? metadataNode.asText() : metadataNode.toString();
+                    dto.setMetadata(metadataStr);
+                } catch (Exception ignore) {}
+            }
+
             // Validação básica
             if (dto.getParameterName() == null || dto.getParameterName().trim().isEmpty()) return null;
             if (dto.getParameterType() == null || dto.getParameterType().trim().isEmpty()) dto.setParameterType("STRING");
@@ -338,6 +351,8 @@ public class ReportsController {
             @PathVariable String reportName,
             @Parameter(description = "Formato de saída do relatório", example = "pdf", schema = @Schema(allowableValues = {"pdf", "html", "csv", "xml", "xlsx"}))
             @RequestParam(defaultValue = "pdf") String format,
+            @Parameter(description = "Modo de entrega (download, preview, print)", example = "download", schema = @Schema(allowableValues = {"download", "preview", "print"}))
+            @RequestParam(defaultValue = "download") String mode,
             @Parameter(description = "Parâmetros dinâmicos do relatório", 
                       content = @Content(examples = @ExampleObject(
                           value = "{\"dataInicio\": \"2024-01-01\", \"dataFim\": \"2024-12-31\", \"vendedorId\": 123}"
@@ -350,17 +365,28 @@ public class ReportsController {
                 parameters = Map.of();
             }
             
+            // Modo de impressão direta
+            if ("print".equalsIgnoreCase(mode)) {
+                serviceReports.printReport(reportName, parameters);
+                return ResponseEntity.ok("Impressão enviada para a impressora padrão".getBytes());
+            }
+
             // Gera o relatório
             byte[] reportData = serviceReports.generateReport(reportName, parameters, format);
-            
+
             // Define o content type baseado no formato
             MediaType contentType = getContentType(format);
             String filename = getFilename(reportName, format);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(contentType);
-            headers.setContentDispositionFormData("attachment", filename);
-            
+            // preview: inline; download: attachment
+            if ("preview".equalsIgnoreCase(mode)) {
+                headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=" + filename);
+            } else {
+                headers.setContentDispositionFormData("attachment", filename);
+            }
+
             return ResponseEntity.ok()
                 .headers(headers)
                 .body(reportData);
@@ -409,8 +435,17 @@ public class ReportsController {
             }
             
             String format = request.getFormat() != null ? request.getFormat() : "pdf";
+            String mode = "download";
             Map<String, Object> parameters = request.getParameters() != null ? request.getParameters() : Map.of();
             
+            // Se no futuro adicionarmos mode no DTO, respeitar aqui
+            // if (request.getMode() != null) { mode = request.getMode(); }
+
+            if ("print".equalsIgnoreCase(mode)) {
+                serviceReports.printReport(request.getReportName(), parameters);
+                return ResponseEntity.ok("Impressão enviada para a impressora padrão".getBytes());
+            }
+
             // Gera o relatório
             byte[] reportData = serviceReports.generateReport(request.getReportName(), parameters, format);
             
@@ -420,7 +455,7 @@ public class ReportsController {
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(contentType);
-            headers.setContentDispositionFormData("attachment", filename);
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=" + filename);
             
             return ResponseEntity.ok()
                 .headers(headers)
@@ -695,6 +730,8 @@ public class ReportsController {
     public ResponseEntity<ReportUploadResponseDTO> importReportSimple(
             @Parameter(description = "Arquivo do relatório (.jasper ou .jrxml)", required = true)
             @RequestParam("file") MultipartFile file,
+            @Parameter(description = "Setor do relatório", required = false, example = "logistica")
+            @RequestParam(value = "setor", required = false) String setor,
             @Parameter(
                 description = "JSON do relatório (use 'data' OU 'body'). Aceita lista, objeto único ou mapa em 'parametros' com apenas nome e tipo.",
                 required = false,
@@ -840,8 +877,8 @@ public class ReportsController {
                 }
             }
 
-            // Usar o serviço existente
-            serviceReports.uploadReport(filename, file, codigo, descricao, parametros);
+            // Usar o serviço existente com setor opcional
+            serviceReports.uploadReport(filename, file, codigo, descricao, parametros, setor);
              
              ReportUploadResponseDTO response = new ReportUploadResponseDTO(
                  "Relatório enviado com sucesso", filename, true);
@@ -875,13 +912,13 @@ public class ReportsController {
         List<Map<String, Object>> types = new ArrayList<>();
         
         for (ParameterType type : ParameterType.values()) {
-            Map<String, Object> typeInfo = Map.of(
-                "type", type.name(),
-                "displayName", type.getDisplayName(),
-                "javaType", type.getJavaType(),
-                "example", type.getExample(),
-                "defaultFormat", type.getDefaultFormat()
-            );
+            // Usar mapa mutável para permitir valores nulos sem lançar NPE
+            Map<String, Object> typeInfo = new java.util.LinkedHashMap<>();
+            typeInfo.put("type", type.name());
+            typeInfo.put("displayName", type.getDisplayName());
+            typeInfo.put("javaType", type.getJavaType());
+            typeInfo.put("example", type.getExample());
+            typeInfo.put("defaultFormat", type.getDefaultFormat());
             types.add(typeInfo);
         }
         
@@ -908,9 +945,9 @@ public class ReportsController {
         )
     })
     @GetMapping("/sectors")
-    public ResponseEntity<Map<String, List<String>>> listReportsBySector() {
+    public ResponseEntity<Map<String, List<ReportInfoDTO>>> listReportsBySector() {
         try {
-            Map<String, List<String>> reportsBySector = serviceReports.listReportsBySector();
+            Map<String, List<ReportInfoDTO>> reportsBySector = serviceReports.listReportsBySector();
             return ResponseEntity.ok(reportsBySector);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -941,14 +978,50 @@ public class ReportsController {
         )
     })
     @GetMapping("/sectors/{sector}")
-    public ResponseEntity<List<String>> listReportsBySector(
+    public ResponseEntity<List<ReportInfoDTO>> listReportsBySector(
             @Parameter(description = "Nome do setor", required = true, example = "logistica")
             @PathVariable String sector) {
         try {
-            List<String> reports = serviceReports.listReportsBySector(sector);
+            List<ReportInfoDTO> reports = serviceReports.listReportsBySector(sector);
             return ResponseEntity.ok(reports);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @Operation(
+        summary = "Definir setor de um relatório",
+        description = "Atualiza o setor (categoria) de um relatório identificado por código ou nome"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Setor atualizado com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(value = "{\"success\": true}")
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Parâmetros inválidos"
+        )
+    })
+    @PostMapping("/sectors/set")
+    public ResponseEntity<Map<String, Object>> setReportSector(
+            @Parameter(description = "Código OU nome do relatório", required = true)
+            @RequestParam("codeOrName") String codeOrName,
+            @Parameter(description = "Setor do relatório", required = true, example = "logistica")
+            @RequestParam("setor") String setor) {
+        try {
+            boolean ok = serviceReports.setReportSector(codeOrName, setor);
+            if (!ok) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Relatório não encontrado ou parâmetros inválidos"));
+            }
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", e.getMessage()));
         }
     }
 }

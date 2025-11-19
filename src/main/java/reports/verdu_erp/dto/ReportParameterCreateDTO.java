@@ -26,4 +26,7 @@ public class ReportParameterCreateDTO {
 
     @Schema(description = "Descrição do parâmetro", example = "Identificador do vendedor")
     private String description;
+
+    @Schema(description = "Metadados em JSON (ex.: opções de select)", example = "{\"options\":[{\"label\":\"Ativo\",\"value\":\"A\"},{\"label\":\"Inativo\",\"value\":\"I\"}]}")
+    private String metadata;
 }

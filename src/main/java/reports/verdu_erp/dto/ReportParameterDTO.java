@@ -9,6 +9,7 @@ public class ReportParameterDTO {
     private String defaultValue;
     private Boolean isRequired;
     private String description;
+    private String metadata;
     private LocalDateTime createdAt;
 
     // Constructors
@@ -16,6 +17,20 @@ public class ReportParameterDTO {
 
     public ReportParameterDTO(Long id, String parameterName, String parameterType, 
                               String defaultValue, Boolean isRequired, String description, 
+                              String metadata, LocalDateTime createdAt) {
+        this.id = id;
+        this.parameterName = parameterName;
+        this.parameterType = parameterType;
+        this.defaultValue = defaultValue;
+        this.isRequired = isRequired;
+        this.description = description;
+        this.metadata = metadata;
+        this.createdAt = createdAt;
+    }
+
+    // Backward-compatible constructor (without metadata)
+    public ReportParameterDTO(Long id, String parameterName, String parameterType,
+                              String defaultValue, Boolean isRequired, String description,
                               LocalDateTime createdAt) {
         this.id = id;
         this.parameterName = parameterName;
@@ -73,6 +88,14 @@ public class ReportParameterDTO {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(String metadata) {
+        this.metadata = metadata;
     }
 
     public LocalDateTime getCreatedAt() {
