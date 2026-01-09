@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  verdu-erp-reports:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: verdu-erp-reports-jaspersoft
+    ports:
+      - "8013:8013"
+    environment:
+      # Database Configuration
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://192.168.8.80:5432/VERDU_ERP
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Solnascente@2025.
+      
+      # MinIO Configuration
+      - MINIO_ENDPOINT=http://192.168.8.200:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      
+      # Audit Configuration
+      - AUDIT_ENABLED=true
+      - LOGS_API_URL=http://192.168.8.60:8090/log/criar
+      
+      # Java Options
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      - SERVER_PORT=8013
+      - SPRING_PROFILES_ACTIVE=docker
+      
+      # Server Configuration
+      - SERVER_ADDRESS=0.0.0.0
+    volumes:
+      - ./relatorios:/app/relatorios
+      - ./logs:/app/logs
+    networks:
+      - verdu-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  verdu-network:
+    driver: bridge
+    external: true

@@ -1,12 +1,17 @@
 package reports.verdu_erp.service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
-import java.util.Map;
-import java.util.List;
-import java.util.Optional;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
@@ -23,13 +28,14 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.Result;
 import io.minio.messages.Item;
+import jakarta.transaction.Transactional;
+import net.sf.jasperreports.engine.JRParameter;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperExportManager;
 import net.sf.jasperreports.engine.JasperFillManager;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperPrintManager;
 import net.sf.jasperreports.engine.JasperReport;
-import net.sf.jasperreports.engine.JRParameter;
 import net.sf.jasperreports.engine.export.HtmlExporter;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
 import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
@@ -38,21 +44,20 @@ import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleHtmlExporterOutput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimpleWriterExporterOutput;
+import reports.verdu_erp.dto.ReportParameterCreateDTO;
+import reports.verdu_erp.dto.ReportParameterDTO;
+import reports.verdu_erp.dto.ReportWithParametersDTO;
 import reports.verdu_erp.entity.Report;
 import reports.verdu_erp.entity.ReportParameter;
-import reports.verdu_erp.repository.ReportRepository;
-import reports.verdu_erp.repository.ReportParameterRepository;
-
-import reports.verdu_erp.dto.ReportWithParametersDTO;
-import reports.verdu_erp.dto.ReportParameterDTO;
-import reports.verdu_erp.dto.ReportParameterCreateDTO;
 import reports.verdu_erp.enums.ParameterType;
-import jakarta.transaction.Transactional;
+import reports.verdu_erp.repository.ReportParameterRepository;
+import reports.verdu_erp.repository.ReportRepository;
 
 @Service
 public class ServiceReports {
 
     private static final String BUCKET_NAME = "relatorios";
+    private static final String LOCAL_REPORTS_PATH = "/app/relatorios";
     
     @Autowired
     private MinioClient minioClient;
@@ -146,57 +151,121 @@ public class ServiceReports {
     }
     
     /**
-     * Baixa um arquivo de relatório do MinIO
-     * Tenta diferentes variações do nome do arquivo se não encontrar diretamente
+     * Baixa um arquivo de relatório do MinIO ou do sistema de arquivos local
      */
     public InputStream downloadReport(String reportName) throws Exception {
-        // Primeiro, tenta o nome exato como fornecido
+        // 1. Tenta baixar do MinIO
         try {
-            return minioClient.getObject(
-                GetObjectArgs.builder()
-                    .bucket(BUCKET_NAME)
-                    .object(reportName)
-                    .build()
-            );
-        } catch (Exception e) {
-            // Se não encontrou, tenta adicionar extensões comuns
-            String[] extensions = {".jasper", ".jrxml"};
-            
-            for (String ext : extensions) {
-                if (!reportName.endsWith(ext)) {
-                    try {
-                        String nameWithExt = reportName + ext;
+            // Primeiro, tenta o nome exato como fornecido
+            try {
+                return minioClient.getObject(
+                    GetObjectArgs.builder()
+                        .bucket(BUCKET_NAME)
+                        .object(reportName)
+                        .build()
+                );
+            } catch (Exception e) {
+                // Se não encontrou, tenta adicionar extensões comuns
+                String[] extensions = {".jasper", ".jrxml"};
+                
+                for (String ext : extensions) {
+                    if (!reportName.endsWith(ext)) {
+                        try {
+                            String nameWithExt = reportName + ext;
+                            return minioClient.getObject(
+                                GetObjectArgs.builder()
+                                    .bucket(BUCKET_NAME)
+                                    .object(nameWithExt)
+                                    .build()
+                            );
+                        } catch (Exception ignored) {
+                            // Continua tentando outras extensões
+                        }
+                    }
+                }
+                
+                // Se ainda não encontrou, tenta buscar por código no banco de dados
+                try {
+                    Optional<Report> reportOpt = reportRepository.findByCodigo(reportName);
+                    if (reportOpt.isPresent()) {
+                        String actualName = reportOpt.get().getName();
                         return minioClient.getObject(
                             GetObjectArgs.builder()
                                 .bucket(BUCKET_NAME)
-                                .object(nameWithExt)
+                                .object(actualName)
                                 .build()
-                        );
-                    } catch (Exception ignored) {
-                        // Continua tentando outras extensões
+                            );
+                    }
+                } catch (Exception ignored) {
+                }
+                
+                throw e; // Lança exceção se não encontrar no MinIO para cair no catch externo
+            }
+        } catch (Exception eMinio) {
+            System.out.println("[WARN] Relatório '" + reportName + "' não encontrado no MinIO. Tentando sistema local: " + eMinio.getMessage());
+            
+            // 2. Fallback para sistema de arquivos local
+            try {
+                return findLocalReport(reportName);
+            } catch (Exception eLocal) {
+                System.out.println("[ERROR] Relatório '" + reportName + "' não encontrado nem no MinIO nem localmente.");
+                throw new RuntimeException("Relatório não encontrado: " + reportName, eLocal);
+            }
+        }
+    }
+
+    private InputStream findLocalReport(String reportName) throws Exception {
+        Path rootPath = Paths.get(LOCAL_REPORTS_PATH);
+        if (!Files.exists(rootPath)) {
+            // Tenta caminho relativo se /app/relatorios não existir (desenvolvimento local fora do docker)
+            rootPath = Paths.get("relatorios");
+            if (!Files.exists(rootPath)) {
+                throw new java.io.FileNotFoundException("Diretório de relatórios não encontrado: " + LOCAL_REPORTS_PATH);
+            }
+        }
+
+        // Se o nome já tem extensão, busca direto
+        // Se não, tenta adicionar extensões
+        List<String> namesToTry = new ArrayList<>();
+        namesToTry.add(reportName);
+        if (!reportName.endsWith(".jasper") && !reportName.endsWith(".jrxml")) {
+            namesToTry.add(reportName + ".jasper");
+            namesToTry.add(reportName + ".jrxml");
+        }
+        
+        // Tenta encontrar o arquivo recursivamente
+        try (Stream<Path> walk = Files.walk(rootPath)) {
+            List<Path> found = walk
+                .filter(p -> !Files.isDirectory(p))
+                .filter(p -> {
+                    String fileName = p.getFileName().toString();
+                    return namesToTry.contains(fileName);
+                })
+                .toList();
+                
+            if (!found.isEmpty()) {
+                // Pega o primeiro encontrado (preferência por .jasper se houver duplicidade de nome base, mas aqui a lista tem ordem de encontro)
+                // Vamos tentar priorizar .jasper se ambos existirem
+                Path bestMatch = found.get(0);
+                for (Path p : found) {
+                    if (p.toString().endsWith(".jasper")) {
+                        bestMatch = p;
+                        break;
                     }
                 }
+                System.out.println("[INFO] Relatório encontrado localmente: " + bestMatch.toAbsolutePath());
+                return new FileInputStream(bestMatch.toFile());
             }
-            
-            // Se ainda não encontrou, tenta buscar por código no banco de dados
-            try {
-                Optional<Report> reportOpt = reportRepository.findByCodigo(reportName);
-                if (reportOpt.isPresent()) {
-                    String actualName = reportOpt.get().getName();
-                    return minioClient.getObject(
-                        GetObjectArgs.builder()
-                            .bucket(BUCKET_NAME)
-                            .object(actualName)
-                            .build()
-                    );
-                }
-            } catch (Exception ignored) {
-                // Se falhar, relança a exceção original
-            }
-            
-            // Se nada funcionou, relança a exceção original
-            throw e;
         }
+        
+        // Se não achou pelo nome de arquivo, tenta pelo código no banco
+        Optional<Report> reportOpt = reportRepository.findByCodigo(reportName);
+        if (reportOpt.isPresent()) {
+            String actualName = reportOpt.get().getName();
+            return findLocalReport(actualName); // Recursão com o nome real
+        }
+
+        throw new java.io.FileNotFoundException("Arquivo não encontrado localmente: " + reportName);
     }
     
     /**
