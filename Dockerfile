@@ -21,8 +21,8 @@ RUN ./mvnw clean package -DskipTests
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
 
-# Install curl for health check
-RUN apk add --no-cache curl
+# Install curl for health check and DejaVu fonts
+RUN apk add --no-cache curl fontconfig ttf-dejavu
 
 # Create non-root user
 RUN addgroup -g 1001 jaspergroup && \
@@ -39,6 +39,9 @@ RUN keytool -import -trustcacerts -cacerts -storepass changeit -noprompt -alias 
 
 # Copy JAR from builder stage
 COPY --from=builder /app/target/*.jar app.jar
+
+# Copy font configuration
+COPY --from=builder /app/src/main/resources/fonts-system.xml /app/fonts-system.xml
 
 # Create directory for reports
 RUN mkdir -p /app/relatorios && chown -R jasperuser:jaspergroup /app

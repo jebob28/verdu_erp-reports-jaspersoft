@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -70,6 +71,12 @@ public class ServiceReports {
     
     @Autowired
     private ReportParameterRepository reportParameterRepository;
+    
+    @Autowired
+    private Environment environment;
+    
+    @Autowired
+    private ReportPrecompilerService reportPrecompilerService;
     
     /**
      * Cria o bucket de relatórios se não existir
@@ -340,6 +347,29 @@ public class ServiceReports {
                 System.setProperty("net.sf.jasperreports.default.pdf.font.name", "DejaVu Sans");
                 System.setProperty("net.sf.jasperreports.default.pdf.encoding", "UTF-8");
                 System.setProperty("net.sf.jasperreports.default.pdf.embedded", "true");
+                
+                // Configuração de fontes baseada no profile
+                String[] activeProfiles = environment.getActiveProfiles();
+                boolean isHomolog = false;
+                for (String profile : activeProfiles) {
+                    if ("homolog".equals(profile)) {
+                        isHomolog = true;
+                        break;
+                    }
+                }
+                
+                if (isHomolog) {
+                    // Usa configuração de fontes do sistema para container Docker
+                    System.setProperty("net.sf.jasperreports.extension.simple.font.families.dejavu", "/app/fonts-system.xml");
+                } else {
+                    // Usa configuração padrão para desenvolvimento
+                    System.setProperty("net.sf.jasperreports.extension.simple.font.families.dejavu", "fonts.xml");
+                }
+                
+                System.setProperty("net.sf.jasperreports.export.pdf.force.linebreak.policy", "false");
+                
+                // Desabilitar extensões de fonte para evitar erros
+                System.setProperty("net.sf.jasperreports.extension.registry.factory.fonts", "");
 
                 JasperExportManager.exportReportToPdfStream(jasperPrint, outputStream);
                 break;
@@ -381,12 +411,125 @@ public class ServiceReports {
         // Baixa o arquivo do relatório do MinIO
         InputStream reportStream = downloadReport(reportName);
 
-        // Compila o relatório se for .jrxml
-        JasperReport jasperReport;
-        if (reportName.endsWith(".jrxml")) {
-            jasperReport = JasperCompileManager.compileReport(reportStream);
+        // Configurações de segurança para evitar erros de fonte
+        System.setProperty("net.sf.jasperreports.awt.ignore.missing.font", "true");
+        System.setProperty("net.sf.jasperreports.default.font.name", "DejaVu Sans");
+        System.setProperty("net.sf.jasperreports.default.pdf.font.name", "DejaVu Sans");
+        System.setProperty("net.sf.jasperreports.default.pdf.encoding", "UTF-8");
+        System.setProperty("net.sf.jasperreports.default.pdf.embedded", "true");
+        System.setProperty("net.sf.jasperreports.extension.registry.factory.fonts", "");
+        
+        // Configurações para evitar problemas de compilação
+        System.setProperty("net.sf.jasperreports.compiler.classpath", System.getProperty("java.class.path"));
+        System.setProperty("net.sf.jasperreports.compiler.keep.java.file", "false");
+        System.setProperty("net.sf.jasperreports.compiler.temp.dir", System.getProperty("java.io.tmpdir"));
+        System.setProperty("net.sf.jasperreports.compile.java.expression", "false");
+        
+        // Configurações adicionais de segurança
+        System.setProperty("net.sf.jasperreports.compiler.disable.unsafe.groovy", "true");
+        System.setProperty("net.sf.jasperreports.compiler.disable.unsafe.javascript", "true");
+        
+        // Desabilitar geração de arquivos Java temporários
+        System.setProperty("net.sf.jasperreports.compiler.java.dir", "");
+        System.setProperty("net.sf.jasperreports.compiler.class.dir", "");
+        System.setProperty("net.sf.jasperreports.compiler.cache.temp.files", "false");
+        
+        // Usar o compilador mais simples possível
+        System.setProperty("net.sf.jasperreports.compiler.class", "net.sf.jasperreports.engine.design.JRJdtCompiler");
+        System.setProperty("net.sf.jasperreports.compiler.java", "false");
+        System.setProperty("net.sf.jasperreports.compiler.expression.class", "false");
+        System.setProperty("net.sf.jasperreports.compiler.expression.groovy", "false");
+        System.setProperty("net.sf.jasperreports.compiler.expression.javascript", "false");
+        
+        // Configurações AGRESSIVAS para evitar compilação Java
+        System.setProperty("net.sf.jasperreports.compiler.allow.java", "false");
+        System.setProperty("net.sf.jasperreports.compiler.allow.groovy", "false");
+        System.setProperty("net.sf.jasperreports.compiler.allow.javascript", "false");
+        System.setProperty("net.sf.jasperreports.compiler.temp.dir", "/tmp/jasperreports");
+        System.setProperty("net.sf.jasperreports.compile.temp.dir", "/tmp/jasperreports");
+        System.setProperty("net.sf.jasperreports.export.temp.dir", "/tmp/jasperreports");
+        System.setProperty("net.sf.jasperreports.compiler.keep.java.file", "false");
+        System.setProperty("net.sf.jasperreports.compiler.keep.class.file", "false");
+        
+        // Configuração de fontes baseada no profile
+        String[] activeProfiles = environment.getActiveProfiles();
+        boolean isHomolog = false;
+        for (String profile : activeProfiles) {
+            if ("homolog".equals(profile)) {
+                isHomolog = true;
+                break;
+            }
+        }
+        
+        if (isHomolog) {
+            // Usa configuração de fontes do sistema para container Docker
+            System.setProperty("net.sf.jasperreports.extension.simple.font.families.dejavu", "/app/fonts-system.xml");
+            System.out.println("[DEBUG] Usando configuração de fontes do sistema para profile homolog");
         } else {
-            jasperReport = (JasperReport) JRLoader.loadObject(reportStream);
+            // Usa configuração padrão para desenvolvimento
+            System.setProperty("net.sf.jasperreports.extension.simple.font.families.dejavu", "fonts.xml");
+            System.out.println("[DEBUG] Usando configuração de fontes padrão para desenvolvimento");
+        }
+        
+        // **SOLUÇÃO DEFINITIVA**: Usar relatórios pré-compilados para eliminar erros de compilação
+        JasperReport jasperReport = null;
+        
+        // 1. TENTAR USAR RELATÓRIO PRÉ-COMPILADO PRIMEIRO
+        System.out.println("[DEBUG] Tentando usar relatório pré-compilado: " + reportName);
+        jasperReport = reportPrecompilerService.getCompiledReport(reportName);
+        
+        if (jasperReport != null) {
+            System.out.println("[DEBUG] ✅ Relatório pré-compilado encontrado e será usado: " + reportName);
+        } else {
+            System.out.println("[DEBUG] ⚠️ Relatório pré-compilado não encontrado, usando compilação tradicional");
+            
+            // 2. COMPILAÇÃO TRADICIONAL COMO FALLBACK (apenas se necessário)
+            if (reportName.endsWith(".jrxml")) {
+                byte[] content = null;
+                try {
+                    // Lê o conteúdo do relatório
+                    content = reportStream.readAllBytes();
+                    
+                    // Salva uma cópia local para debug
+                    try {
+                        Files.write(Paths.get("debug_" + reportName), content);
+                        System.out.println("[DEBUG] Cópia do relatório salva em: debug_" + reportName);
+                    } catch (Exception debugError) {
+                        System.out.println("[WARN] Não foi possível salvar cópia de debug: " + debugError.getMessage());
+                    }
+                    
+                    // Configurações de compilação mais seguras
+                    System.setProperty("net.sf.jasperreports.compiler.class", "net.sf.jasperreports.engine.design.JRJdtCompiler");
+                    System.setProperty("net.sf.jasperreports.compiler.keep.java.file", "false");
+                    System.setProperty("net.sf.jasperreports.compile.java.expression", "false");
+                    
+                    // Tenta compilar com configurações simplificadas
+                    System.out.println("[DEBUG] Tentando compilar com JRJdtCompiler...");
+                    jasperReport = JasperCompileManager.compileReport(new java.io.ByteArrayInputStream(content));
+                    System.out.println("[DEBUG] Compilação bem-sucedida com JRJdtCompiler");
+                    
+                } catch (Exception e) {
+                    System.err.println("[ERROR] Falha na compilação do Jasper: " + e.getMessage());
+                    e.printStackTrace();
+                    
+                    // Se falhar, tenta uma abordagem alternativa
+                    if (content != null) {
+                        try {
+                            System.out.println("[DEBUG] Tentando compilar com JRJavacCompiler...");
+                            System.setProperty("net.sf.jasperreports.compiler.class", "net.sf.jasperreports.engine.design.JRJavacCompiler");
+                            jasperReport = JasperCompileManager.compileReport(new java.io.ByteArrayInputStream(content));
+                            System.out.println("[DEBUG] Compilação bem-sucedida com JRJavacCompiler");
+                        } catch (Exception e2) {
+                            System.err.println("[ERROR] Falha na compilação alternativa: " + e2.getMessage());
+                            throw new RuntimeException("Falha na compilação do relatório: " + reportName + ". Erro original: " + e.getMessage(), e);
+                        }
+                    } else {
+                        throw new RuntimeException("Conteúdo do relatório está vazio", e);
+                    }
+                }
+            } else {
+                jasperReport = (JasperReport) JRLoader.loadObject(reportStream);
+            }
         }
 
         System.out.println("[DEBUG] Relatório compilado/carregado com sucesso");

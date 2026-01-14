@@ -1,0 +1,199 @@
+<!-- Created with Jaspersoft Studio version 7.0.3.final using JasperReports Library version 7.0.3-41034ca841d452f3305ba55b9042260aaa1ab5dd  -->
+<jasperReport name="Relatoriodecatacao" language="java" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="126167c8-ebef-473b-89b4-ab87e1cdb6d9">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="VERDU_ERP"/>
+	<dataset name="FORNE" uuid="e43eb431-253c-4314-b1a9-4f84c73527fa">
+		<query language="sql"><![CDATA[]]></query>
+	</dataset>
+	<parameter name="catacao" class="java.lang.Integer"/>
+	<query language="SQL"><![CDATA[SELECT cc.bairro_catacao,
+	lm.nome as motorista,
+	lv.modelo,
+	lv.placa,
+	cf.nome_fantasia,
+	cf.endereco,
+	coi.ordemcompra_id AS oc,
+	cp.nome as produto,
+	cu.sigla,
+	coi.quantidade
+FROM ct_catacao cc
+	join lo_motorista lm ON 
+	 lm.id = cc.motorista_id 
+	left outer join lo_veiculos lv ON 
+	 lv.id = cc.veiculo_id 
+	left outer join ct_catacao_fornecedor ccf ON 
+	 ccf.catacao_id = cc.id 
+	left outer join cm_fornecedores cf ON 
+	 cf.id = ccf.fornecedor_id 
+	left outer join cm_ordemcompra co ON 
+	 co.fornecedor_id = cf.id 
+	left outer join cm_ordemcompras_itens coi ON 
+	 coi.ordemcompra_id = co.id 
+	left outer join cp_produtos cp ON 
+	 cp.id = coi.produto_id 
+	left outer join cp_unidademedida cu ON 
+	 cu.id = coi.unidademedida_id 
+WHERE 
+	 co.status_id = 1 
+	 AND cc.id = $P{catacao}]]></query>
+	<field name="bairro_catacao" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="bairro_catacao"/>
+		<property name="com.jaspersoft.studio.field.label" value="bairro_catacao"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="ct_catacao"/>
+	</field>
+	<field name="motorista" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="motorista"/>
+		<property name="com.jaspersoft.studio.field.label" value="motorista"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="lo_motorista"/>
+	</field>
+	<field name="modelo" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="modelo"/>
+		<property name="com.jaspersoft.studio.field.label" value="modelo"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="lo_veiculos"/>
+	</field>
+	<field name="placa" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="placa"/>
+		<property name="com.jaspersoft.studio.field.label" value="placa"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="lo_veiculos"/>
+	</field>
+	<field name="nome_fantasia" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="nome_fantasia"/>
+		<property name="com.jaspersoft.studio.field.label" value="nome_fantasia"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cm_fornecedores"/>
+	</field>
+	<field name="endereco" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="endereco"/>
+		<property name="com.jaspersoft.studio.field.label" value="endereco"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cm_fornecedores"/>
+	</field>
+	<field name="oc" class="java.lang.Integer">
+		<property name="com.jaspersoft.studio.field.name" value="oc"/>
+		<property name="com.jaspersoft.studio.field.label" value="oc"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cm_ordemcompras_itens"/>
+	</field>
+	<field name="produto" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="produto"/>
+		<property name="com.jaspersoft.studio.field.label" value="produto"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_produtos"/>
+	</field>
+	<field name="sigla" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="sigla"/>
+		<property name="com.jaspersoft.studio.field.label" value="sigla"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_unidademedida"/>
+	</field>
+	<field name="quantidade" class="java.lang.Double">
+		<property name="com.jaspersoft.studio.field.name" value="quantidade"/>
+		<property name="com.jaspersoft.studio.field.label" value="quantidade"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cm_ordemcompras_itens"/>
+	</field>
+	<group name="Rota">
+		<groupHeader>
+			<band height="108">
+				<element kind="textField" uuid="e7d8ee99-fd78-400f-8033-032a59f536f1" x="197" y="4" width="210" height="30" fontSize="19.0" bold="true">
+					<expression><![CDATA[$F{bairro_catacao}]]></expression>
+				</element>
+				<element kind="staticText" uuid="524ce6e4-f0de-4a49-b65e-792e873d2f0b" x="66" y="40" width="70" height="30">
+					<text><![CDATA[MOTORISTA:]]></text>
+				</element>
+				<element kind="textField" uuid="cc526715-87f3-4f32-b41b-442cd45911eb" x="136" y="40" width="100" height="30">
+					<expression><![CDATA[$F{motorista}]]></expression>
+				</element>
+				<element kind="staticText" uuid="d7f76e6e-a146-4564-8be9-54a9aa40a77b" x="236" y="40" width="70" height="30">
+					<text><![CDATA[CAMINHÃO:]]></text>
+				</element>
+				<element kind="textField" uuid="71895289-1203-44c9-8ddb-29107c366d78" x="306" y="40" width="80" height="30">
+					<expression><![CDATA[$F{modelo}]]></expression>
+				</element>
+				<element kind="staticText" uuid="e22e2ebd-3b01-4f80-8b1c-abfcf5b9084e" x="386" y="40" width="50" height="30">
+					<text><![CDATA[PLACA:]]></text>
+				</element>
+				<element kind="textField" uuid="a513480a-f021-4145-bafa-cfd8653b7928" x="436" y="40" width="70" height="30">
+					<expression><![CDATA[$F{placa}]]></expression>
+				</element>
+				<element kind="staticText" uuid="b7bc595c-45a5-4eab-89eb-2af5203547b3" x="192" y="70" width="40" height="30" fontSize="12.0" bold="true">
+					<text><![CDATA[DATA:]]></text>
+				</element>
+				<element kind="textField" uuid="0d9470e2-17f8-43ff-86b0-4a7966dfa7e0" x="233" y="70" width="130" height="30" fontSize="12.0" pattern=" dd,MMMMM, yyyy" bold="true">
+					<expression><![CDATA[new java.util.Date()]]></expression>
+				</element>
+			</band>
+		</groupHeader>
+	</group>
+	<group name="FORNECEDOR" reprintHeaderOnEachPage="true">
+		<expression><![CDATA[$F{nome_fantasia}]]></expression>
+		<groupHeader>
+			<band height="40">
+				<element kind="staticText" uuid="5dc2bd70-a5b0-4da7-a1cf-536155fe8758" x="0" y="0" width="66" height="20" bold="true" vTextAlign="Middle">
+					<text><![CDATA[PRODUTOR:]]></text>
+				</element>
+				<element kind="textField" uuid="e129ddc4-4ac0-4b6a-9658-182fd960af7b" x="66" y="0" width="100" height="20" bold="true" vTextAlign="Middle">
+					<expression><![CDATA[$F{nome_fantasia}]]></expression>
+				</element>
+				<element kind="staticText" uuid="91276a0c-0334-4ba2-9c3b-16e5fc1da58a" x="250" y="0" width="30" height="20" bold="true" vTextAlign="Middle">
+					<text><![CDATA[OC:
+]]></text>
+				</element>
+				<element kind="textField" uuid="60c349fb-8329-4508-8362-64bbfc3f5092" x="280" y="0" width="100" height="20" bold="true" vTextAlign="Middle">
+					<expression><![CDATA[$F{oc}]]></expression>
+				</element>
+				<element kind="staticText" uuid="818c30ac-6df0-44db-9b6d-dcd46fa84695" x="0" y="20" width="130" height="20" bold="true" vTextAlign="Middle">
+					<text><![CDATA[PRODUTO:]]></text>
+				</element>
+				<element kind="staticText" uuid="4b328e28-58a4-4d3d-a81a-97a782f657af" x="130" y="20" width="100" height="20" bold="true" hTextAlign="Center" vTextAlign="Middle">
+					<text><![CDATA[QUANTIDADE]]></text>
+				</element>
+				<element kind="staticText" uuid="22947738-54f9-4691-8c6d-29f18a0ef9c5" x="230" y="20" width="100" height="20" bold="true" hTextAlign="Center" vTextAlign="Middle">
+					<text><![CDATA[CAIXA ENTREGUE]]></text>
+				</element>
+				<element kind="staticText" uuid="f92e893e-4d57-43f9-ac20-803aee0dcd6f" x="330" y="20" width="100" height="20" bold="true" hTextAlign="Center" vTextAlign="Middle">
+					<text><![CDATA[CAIXA RECEBIDA]]></text>
+				</element>
+			</band>
+		</groupHeader>
+	</group>
+	<background splitType="Stretch"/>
+	<title height="37" splitType="Stretch">
+		<element kind="staticText" uuid="ed9df87b-4359-4706-83fa-7c007f080d5e" x="149" y="7" width="270" height="30" fontSize="19.0" bold="true" hTextAlign="Center">
+			<text><![CDATA[RELATORIO DE CATAÇÃO]]></text>
+		</element>
+	</title>
+	<detail>
+		<band height="20" splitType="Stretch">
+			<element kind="textField" uuid="d07b6a9e-fa49-4b94-83fb-14f9c64f00df" x="0" y="0" width="80" height="20" vTextAlign="Middle">
+				<expression><![CDATA[$F{produto}]]></expression>
+				<box>
+					<topPen lineWidth="1.0"/>
+					<bottomPen lineWidth="1.0"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="3b8265d2-689b-4e31-b186-33e31a69521f" x="80" y="0" width="50" height="20" vTextAlign="Middle">
+				<expression><![CDATA[$F{sigla}]]></expression>
+				<box>
+					<topPen lineWidth="1.0"/>
+					<bottomPen lineWidth="1.0"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="c662e015-79ac-4f43-bc1a-51606cde463c" x="130" y="0" width="100" height="20" hTextAlign="Center" vTextAlign="Middle">
+				<expression><![CDATA[$F{quantidade}]]></expression>
+				<box>
+					<topPen lineWidth="1.0"/>
+					<bottomPen lineWidth="1.0"/>
+				</box>
+			</element>
+			<element kind="staticText" uuid="1faaf878-7a48-4de3-a02f-cdf67e637b92" x="230" y="0" width="100" height="20">
+				<text><![CDATA[]]></text>
+				<box>
+					<topPen lineWidth="1.0"/>
+					<bottomPen lineWidth="1.0"/>
+				</box>
+			</element>
+			<element kind="staticText" uuid="ddd45f56-c8de-4735-9e7c-32ad7aa2049e" x="330" y="0" width="100" height="20">
+				<text><![CDATA[]]></text>
+				<box>
+					<topPen lineWidth="1.0"/>
+					<bottomPen lineWidth="1.0"/>
+				</box>
+			</element>
+		</band>
+	</detail>
+</jasperReport>

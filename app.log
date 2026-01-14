@@ -1,0 +1,85 @@
+[[1;34mINFO[m] Scanning for projects...
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m-------------------------< [0;36mreports:verdu_erp[0;1m >--------------------------[m
+[[1;34mINFO[m] [1mBuilding verdu_erp 0.0.1-SNAPSHOT[m
+[[1;34mINFO[m]   from pom.xml
+[[1;34mINFO[m] [1m--------------------------------[ jar ]---------------------------------[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m>>> [0;32mspring-boot:3.5.6:run[m [1m(default-cli)[0;1m > [0;1mtest-compile[m @ [36mverdu_erp[0;1m >>>[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mresources:3.3.1:resources[m [1m(default-resources)[m @ [36mverdu_erp[0;1m ---[m
+[[1;34mINFO[m] Copying 2 resources from src/main/resources to target/classes
+[[1;34mINFO[m] Copying 3 resources from src/main/resources to target/classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mcompiler:3.14.0:compile[m [1m(default-compile)[m @ [36mverdu_erp[0;1m ---[m
+[[1;34mINFO[m] Nothing to compile - all classes are up to date.
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mresources:3.3.1:testResources[m [1m(default-testResources)[m @ [36mverdu_erp[0;1m ---[m
+[[1;34mINFO[m] skip non existing resourceDirectory /home/ti/erp_verdu_base_teste/verdu_erp-reports-jaspersoft/src/test/resources
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mcompiler:3.14.0:testCompile[m [1m(default-testCompile)[m @ [36mverdu_erp[0;1m ---[m
+[[1;34mINFO[m] Nothing to compile - all classes are up to date.
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m<<< [0;32mspring-boot:3.5.6:run[m [1m(default-cli)[0;1m < [0;1mtest-compile[m @ [36mverdu_erp[0;1m <<<[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mspring-boot:3.5.6:run[m [1m(default-cli)[m @ [36mverdu_erp[0;1m ---[m
+[[1;34mINFO[m] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.6)
+
+2026-01-14T13:55:17.695Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] reports.verdu_erp.VerduErpApplication    : Starting VerduErpApplication using Java 21.0.9 with PID 1927210 (/home/ti/erp_verdu_base_teste/verdu_erp-reports-jaspersoft/target/classes started by ti in /home/ti/erp_verdu_base_teste/verdu_erp-reports-jaspersoft)
+2026-01-14T13:55:17.699Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] reports.verdu_erp.VerduErpApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-01-14T13:55:17.764Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-01-14T13:55:17.764Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-01-14T13:55:19.557Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-14T13:55:19.660Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 87 ms. Found 3 JPA repository interfaces.
+2026-01-14T13:55:20.852Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8015 (http)
+2026-01-14T13:55:20.876Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-14T13:55:20.877Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-01-14T13:55:20.960Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-14T13:55:20.963Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3196 ms
+2026-01-14T13:55:21.500Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-14T13:55:21.577Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.29.Final
+2026-01-14T13:55:21.625Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-14T13:55:22.043Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-14T13:55:22.090Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-14T13:55:22.533Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@692b97ca
+2026-01-14T13:55:22.535Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-14T13:55:22.578Z  WARN 1927210 --- [reports-jaspersoft] [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-14T13:55:22.606Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 17.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-01-14T13:55:24.065Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-14T13:55:24.347Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+[INFO] JasperReports configurado com suporte aprimorado a fontes
+2026-01-14T13:55:25.116Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-14T13:55:26.224Z  WARN 1927210 --- [reports-jaspersoft] [  restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-14T13:55:26.309Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2026-01-14T13:55:27.119Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-01-14T13:55:27.132Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-01-14T13:55:27.260Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8015 (http) with context path '/'
+2026-01-14T13:55:27.285Z  INFO 1927210 --- [reports-jaspersoft] [  restartedMain] reports.verdu_erp.VerduErpApplication    : Started VerduErpApplication in 10.214 seconds (process running for 10.922)
+2026-01-14T13:55:33.680Z  INFO 1927210 --- [reports-jaspersoft] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-01-14T13:55:33.688Z  INFO 1927210 --- [reports-jaspersoft] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-01-14T13:55:33.698Z  INFO 1927210 --- [reports-jaspersoft] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-14T13:55:33.703Z  INFO 1927210 --- [reports-jaspersoft] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-14T13:55:33.723Z  INFO 1927210 --- [reports-jaspersoft] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] [1;32mBUILD SUCCESS[m
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] Total time:  20.528 s
+[[1;34mINFO[m] Finished at: 2026-01-14T13:55:34Z
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m

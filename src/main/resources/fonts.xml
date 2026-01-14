@@ -1,39 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fontFamilies>
-    <!-- Mapeamento de fontes para garantir compatibilidade -->
-    <fontFamily name="SansSerif">
-        <normal>net/sf/jasperreports/fonts/dejavu/DejaVuSans.ttf</normal>
-        <bold>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Bold.ttf</bold>
-        <italic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Oblique.ttf</italic>
-        <boldItalic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-BoldOblique.ttf</boldItalic>
-        <pdfEncoding>UTF-8</pdfEncoding>
-        <pdfEmbedded>true</pdfEmbedded>
-    </fontFamily>
-    
     <fontFamily name="DejaVu Sans">
-        <normal>net/sf/jasperreports/fonts/dejavu/DejaVuSans.ttf</normal>
-        <bold>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Bold.ttf</bold>
-        <italic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Oblique.ttf</italic>
-        <boldItalic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-BoldOblique.ttf</boldItalic>
-        <pdfEncoding>UTF-8</pdfEncoding>
-        <pdfEmbedded>true</pdfEmbedded>
-    </fontFamily>
-    
-    <fontFamily name="Arial">
-        <normal>net/sf/jasperreports/fonts/dejavu/DejaVuSans.ttf</normal>
-        <bold>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Bold.ttf</bold>
-        <italic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Oblique.ttf</italic>
-        <boldItalic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-BoldOblique.ttf</boldItalic>
-        <pdfEncoding>UTF-8</pdfEncoding>
-        <pdfEmbedded>true</pdfEmbedded>
-    </fontFamily>
-    
-    <fontFamily name="Helvetica">
-        <normal>net/sf/jasperreports/fonts/dejavu/DejaVuSans.ttf</normal>
-        <bold>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Bold.ttf</bold>
-        <italic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-Oblique.ttf</italic>
-        <boldItalic>net/sf/jasperreports/fonts/dejavu/DejaVuSans-BoldOblique.ttf</boldItalic>
-        <pdfEncoding>UTF-8</pdfEncoding>
+        <normal>fonts/DejaVuSans.ttf</normal>
+        <bold>fonts/DejaVuSans-Bold.ttf</bold>
+        <italic>fonts/DejaVuSans-Oblique.ttf</italic>
+        <boldItalic>fonts/DejaVuSans-BoldOblique.ttf</boldItalic>
         <pdfEmbedded>true</pdfEmbedded>
     </fontFamily>
 </fontFamilies>

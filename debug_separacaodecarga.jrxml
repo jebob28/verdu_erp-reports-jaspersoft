@@ -1,0 +1,239 @@
+<!-- Created with Jaspersoft Studio version 7.0.3.final using JasperReports Library version 7.0.3-41034ca841d452f3305ba55b9042260aaa1ab5dd  -->
+<jasperReport name="separacaodecarga" language="java" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="57e4fc6b-b464-4850-b168-25ecc420eb54">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="VERDU_ERP"/>
+	<parameter name="ROTA_ID" class="java.lang.Long"/>
+	<query language="SQL"><![CDATA[SELECT 
+    lr.nome_rota AS rota,
+    lv.modelo as veiculo,
+    lv.placa,
+    lm.nome AS motorista,
+    cc.nome_fantasia AS cliente,
+    co.numero_ov as OV,
+    cp.nome as produto ,
+    cu.sigla ,
+    ci.quantidade,
+    '' as separado,
+    co.data_entrega,
+    COALESCE(CEIL(ci.quantidade::numeric / NULLIF(cp.qtd_porcaixa_saida, 0)), 0) AS qtd_caixa
+FROM lo_rotas lr
+LEFT JOIN lo_veiculos lv ON lv.id = lr.veiculo_id 
+LEFT JOIN lo_motorista lm ON lm.id = lr.motorista_id
+LEFT JOIN cp_cliente cc ON cc.rota_id = lr.id
+inner join cp_ordemvenda co on co.cliente_id =cc.id
+left join cp_itemov ci on ci.ordem_venda_id = co.id 
+left outer join cp_produtos cp on cp.id=ci.produto_id 
+left outer join cp_unidademedida cu on cu.id=ci.unidade_medida_id 
+where lr.id=$P{ROTA_ID}
+ORDER BY lr.id, cc.nome_fantasia;
+]]></query>
+	<field name="rota" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="rota"/>
+		<property name="com.jaspersoft.studio.field.label" value="rota"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="lo_rotas"/>
+	</field>
+	<field name="veiculo" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="veiculo"/>
+		<property name="com.jaspersoft.studio.field.label" value="veiculo"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="lo_veiculos"/>
+	</field>
+	<field name="placa" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="placa"/>
+		<property name="com.jaspersoft.studio.field.label" value="placa"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="lo_veiculos"/>
+	</field>
+	<field name="motorista" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="motorista"/>
+		<property name="com.jaspersoft.studio.field.label" value="motorista"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="lo_motorista"/>
+	</field>
+	<field name="cliente" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="cliente"/>
+		<property name="com.jaspersoft.studio.field.label" value="cliente"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_cliente"/>
+	</field>
+	<field name="ov" class="java.lang.Long">
+		<property name="com.jaspersoft.studio.field.name" value="ov"/>
+		<property name="com.jaspersoft.studio.field.label" value="ov"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_ordemvenda"/>
+	</field>
+	<field name="produto" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="produto"/>
+		<property name="com.jaspersoft.studio.field.label" value="produto"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_produtos"/>
+	</field>
+	<field name="sigla" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="sigla"/>
+		<property name="com.jaspersoft.studio.field.label" value="sigla"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_unidademedida"/>
+	</field>
+	<field name="quantidade" class="java.lang.Integer">
+		<property name="com.jaspersoft.studio.field.name" value="quantidade"/>
+		<property name="com.jaspersoft.studio.field.label" value="quantidade"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_itemov"/>
+	</field>
+	<field name="separado" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="separado"/>
+		<property name="com.jaspersoft.studio.field.label" value="separado"/>
+	</field>
+	<field name="data_entrega" class="java.sql.Date">
+		<property name="com.jaspersoft.studio.field.name" value="data_entrega"/>
+		<property name="com.jaspersoft.studio.field.label" value="data_entrega"/>
+		<property name="com.jaspersoft.studio.field.tree.path" value="cp_ordemvenda"/>
+	</field>
+	<field name="qtd_caixa" class="java.math.BigDecimal">
+		<property name="com.jaspersoft.studio.field.name" value="qtd_caixa"/>
+		<property name="com.jaspersoft.studio.field.label" value="qtd_caixa"/>
+	</field>
+	<variable name="qtd_caixa1" resetType="Page" calculation="Count" class="java.lang.Integer">
+		<expression><![CDATA[$F{qtd_caixa}]]></expression>
+	</variable>
+	<group name="Rota">
+		<expression><![CDATA[$F{rota}]]></expression>
+	</group>
+	<background splitType="Stretch"/>
+	<title height="120" splitType="Stretch">
+		<element kind="staticText" uuid="bfb6fa31-5bd7-4428-b7ad-3bc5a7cbbf38" x="111" y="47" width="353" height="30" fontName="Serif" fontSize="16.0" bold="true">
+			<text><![CDATA[RELATORIO SEPARAÇÃO DE CARGA ]]></text>
+			<box>
+				<pen lineStyle="Solid"/>
+				<bottomPen lineWidth="1.0"/>
+			</box>
+		</element>
+		<element kind="image" uuid="7b7d73eb-538d-4280-80bd-da40564d2cf1" x="0" y="17" width="107" height="90">
+			<expression><![CDATA["http://192.168.8.60:3002/api/logo/logo-1761680845764-50325413.png"]]></expression>
+		</element>
+		<element kind="image" uuid="5b6b6cef-bb54-45b2-b899-3152123e6174" x="472" y="42" width="73" height="78">
+			<expression><![CDATA["http://192.168.8.60:3002/api/logo/logo-1761680861225-740460962.png"]]></expression>
+		</element>
+	</title>
+	<pageHeader height="103" splitType="Stretch">
+		<element kind="textField" uuid="224bb419-6f6e-4d8c-abc0-46d129732095" x="288" y="3" width="125" height="20" fontName="Serif" fontSize="16.0" hTextAlign="Center">
+			<expression><![CDATA[$F{rota}]]></expression>
+		</element>
+		<element kind="staticText" uuid="01c70870-fbe0-41c4-a4f3-2323ef50fe50" x="43" y="28" width="30" height="30" fontName="Serif" fontSize="15.0" bold="true">
+			<text><![CDATA[ov:]]></text>
+		</element>
+		<element kind="textField" uuid="090f2a76-c3b2-43c7-a4bd-1f1fe937dffa" x="73" y="30" width="60" height="22" fontName="Serif" fontSize="13.0" hTextAlign="Left" vTextAlign="Top">
+			<expression><![CDATA[$F{ov}]]></expression>
+		</element>
+		<element kind="staticText" uuid="d39f91ab-5687-4255-8f3d-cac4998b9601" x="268" y="59" width="60" height="26" fontName="Serif" bold="true">
+			<text><![CDATA[VEICULOS:]]></text>
+		</element>
+		<element kind="textField" uuid="09ee24c5-6e45-4f43-a38d-d6041adbef46" x="324" y="59" width="100" height="30" fontName="Serif">
+			<expression><![CDATA[$F{veiculo}]]></expression>
+		</element>
+		<element kind="staticText" uuid="09102915-48da-4448-8fb3-5ba450ebc615" x="424" y="59" width="40" height="30" fontName="Serif" bold="true" hTextAlign="Left">
+			<text><![CDATA[PLACA:]]></text>
+		</element>
+		<element kind="textField" uuid="d96c1a09-e236-41e7-b0be-5f5d5d740add" x="462" y="59" width="100" height="30" fontName="SansSerif">
+			<expression><![CDATA[$F{placa}]]></expression>
+		</element>
+		<element kind="staticText" uuid="04c25f80-3b31-4db3-9253-ffbc4a9ef96b" x="43" y="58" width="80" height="12" fontName="Serif" bold="true" hTextAlign="Left">
+			<text><![CDATA[MOTORISTA:]]></text>
+		</element>
+		<element kind="textField" uuid="bf3df0b1-3f41-4ebb-9e69-b51da99e6e02" x="123" y="58" width="140" height="12" fontName="Serif">
+			<expression><![CDATA[$F{motorista}]]></expression>
+		</element>
+		<element kind="staticText" uuid="47c5100c-4a00-4f16-ae38-0ae28ddf0b5f" x="43" y="85" width="100" height="18" fontName="Serif" fontSize="12.0" bold="true" vTextAlign="Bottom">
+			<text><![CDATA[PRODUTO]]></text>
+		</element>
+		<element kind="staticText" uuid="230fb557-4470-4113-bc35-a6645a5f80b4" x="143" y="85" width="130" height="18" fontName="Serif" bold="true" vTextAlign="Bottom">
+			<text><![CDATA[UNIDADE MEDIDA]]></text>
+		</element>
+		<element kind="staticText" uuid="e24d2c81-ad34-4cd0-9f60-347e87121b72" x="273" y="85" width="100" height="18" fontName="Serif" bold="true" hTextAlign="Center" vTextAlign="Bottom">
+			<text><![CDATA[QUANTIDADE]]></text>
+		</element>
+		<element kind="staticText" uuid="eef017d9-d58a-4bc9-9fb8-04c9248dbb4d" x="373" y="85" width="100" height="18" fontName="Serif" hTextAlign="Center" vTextAlign="Bottom">
+			<text><![CDATA[SEPARADO]]></text>
+		</element>
+		<element kind="staticText" uuid="45f5de41-e6e6-4003-8461-a4b8ec4dbc83" x="183" y="34" width="50" height="20" fontName="Serif" bold="false">
+			<text><![CDATA[CLIENTE:]]></text>
+		</element>
+		<element kind="textField" uuid="201ee967-b348-4778-a253-b0828e1f55c7" x="233" y="24" width="170" height="30" fontName="Serif" bold="true" vTextAlign="Middle">
+			<expression><![CDATA[$F{cliente}]]></expression>
+		</element>
+		<element kind="staticText" uuid="0b88b512-6718-4cde-9b95-9f6a14f6c3fd" x="240" y="5" width="50" height="19" fontName="Serif" fontSize="14.0" bold="true">
+			<text><![CDATA[ROTA:
+]]></text>
+		</element>
+		<element kind="staticText" uuid="c2c81b76-0617-4cea-81c0-146c5c12d675" x="392" y="22" width="86" height="18" fontName="Serif" bold="true" vTextAlign="Middle">
+			<text><![CDATA[DATA ENTREGA]]></text>
+		</element>
+		<element kind="textField" uuid="a60ff985-7933-4ce1-a511-9da2e97c08d0" x="480" y="22" width="100" height="18" fontName="SansSerif" pattern="dd/MM/yyyy&#xa;" vTextAlign="Middle">
+			<expression><![CDATA[$F{data_entrega}]]></expression>
+		</element>
+		<element kind="staticText" uuid="cc7e32cd-c4f1-4b63-b8b1-b337d8557092" x="472" y="89" width="84" height="14" fontName="SansSerif" bold="true" vTextAlign="Bottom">
+			<text><![CDATA[FORNECEDOR]]></text>
+		</element>
+	</pageHeader>
+	<detail>
+		<band height="22" splitType="Stretch">
+			<element kind="textField" uuid="b39e455c-fe61-4b75-a211-0358c15d9454" x="33" y="2" width="110" height="18" fontName="Serif" hTextAlign="Center" vTextAlign="Middle">
+				<expression><![CDATA[$F{produto}]]></expression>
+				<box>
+					<pen lineWidth="1.0" lineStyle="Dashed"/>
+					<topPen lineWidth="1.0" lineStyle="Dashed"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.0"/>
+					<rightPen lineWidth="0.0"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="6fb487f8-87c2-4e99-b67a-510ea460dea3" x="143" y="2" width="130" height="18" fontName="Serif" hTextAlign="Center" vTextAlign="Middle">
+				<expression><![CDATA[$F{sigla}]]></expression>
+				<box>
+					<pen lineStyle="Dashed"/>
+					<topPen lineWidth="1.0"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="c208c37c-c28b-423a-abc7-7fbf88616b84" x="273" y="2" width="100" height="18" fontName="Serif" hTextAlign="Center" vTextAlign="Middle">
+				<expression><![CDATA[$F{quantidade}]]></expression>
+				<box>
+					<pen lineWidth="1.0"/>
+					<topPen lineWidth="1.0" lineStyle="Dashed"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.0"/>
+					<rightPen lineWidth="0.0"/>
+				</box>
+			</element>
+			<element kind="staticText" uuid="0ee1f3ed-c409-4079-99ad-cd46b67e5f6d" x="377" y="2" width="95" height="20" fontName="Serif" hTextAlign="Center" vTextAlign="Middle">
+				<text><![CDATA[[      ]]]></text>
+				<box>
+					<topPen lineWidth="1.0" lineStyle="Dashed"/>
+				</box>
+			</element>
+			<element kind="staticText" uuid="dc87d328-02b3-4944-a17b-6d8d306e402e" x="473" y="2" width="83" height="20">
+				<text><![CDATA[]]></text>
+				<box>
+					<topPen lineWidth="1.0" lineStyle="Dashed"/>
+				</box>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="73" splitType="Stretch">
+		<element kind="textField" uuid="2e98f5d0-f0fe-471e-8554-93f6bfa1a168" x="505" y="4" width="51" height="30" fontName="SansSerif" bold="true" vTextAlign="Middle">
+			<expression><![CDATA[$V{qtd_caixa1}]]></expression>
+			<box>
+				<pen lineStyle="Solid"/>
+				<topPen lineWidth="1.0" lineStyle="Solid"/>
+				<leftPen lineWidth="0.0" lineStyle="Solid"/>
+				<bottomPen lineWidth="1.0" lineStyle="Solid"/>
+				<rightPen lineWidth="1.0" lineStyle="Solid"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="749b6832-3c34-4c2d-9156-d7b31d40fa38" x="390" y="4" width="116" height="30" fontName="Serif" bold="true" hTextAlign="Center" vTextAlign="Middle">
+			<text><![CDATA[QUANTIDADE CAIXA:]]></text>
+			<box>
+				<pen lineWidth="1.0" lineStyle="Solid"/>
+				<rightPen lineWidth="0.0"/>
+			</box>
+		</element>
+		<element kind="line" uuid="107fe1c6-e5c1-4279-9c63-b9b5f71d2c89" x="27" y="53" width="199" height="1">
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+		</element>
+		<element kind="staticText" uuid="1b40b5f0-3f70-4a26-995e-3e69451118b9" x="50" y="57" width="140" height="12" fontName="Serif">
+			<text><![CDATA[ASSINATURA CONFERENTE]]></text>
+		</element>
+	</pageFooter>
+	<summary height="42" splitType="Stretch"/>
+</jasperReport>

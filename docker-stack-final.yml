@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  api-comercial:
+    # IMPORTANTE: Use a imagem v2 que contém as correções ou build localmente
+    image: ghcr.io/jebob28/report-jaspersoft:v1
+    environment:
+      # Profile
+      SPRING_PROFILES_ACTIVE: homolog
+      
+      # Banco de Dados
+      SPRING_DATASOURCE_URL: jdbc:postgresql://192.168.8.80:5432/VERDU_ERP?useUnicode=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Solnascente@2025.
+      
+      # MinIO - CORREÇÃO: endpoint sem aspas invertidas
+      MINIO_ENDPOINT: http://192.168.8.200:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      
+      # Auditoria
+      AUDIT_ENABLED: "false"
+      
+      # Porta da aplicação
+      SERVER_PORT: 8013
+      
+      # ===== CORREÇÕES CRÍTICAS PARA ERRO 500 DE COMPILAÇÃO =====
+      
+      # Java Options - ESSENCIAL
+      JAVA_OPTS: "-Djava.awt.headless=true -Djava.io.tmpdir=/tmp -Dfile.encoding=UTF-8"
+      
+      # Compilador JasperReports - EVITA ERRO DE COMPILAÇÃO
+      net_sf_jasperreports_compiler_class: "net.sf.jasperreports.engine.design.JRJdtCompiler"
+      net_sf_jasperreports_compiler_cache_temp_files: "false"
+      net_sf_jasperreports_compiler_java: "false"
+      net_sf_jasperreports_compiler_expression_class: "false"
+      net_sf_jasperreports_compiler_expression_groovy: "false"
+      net_sf_jasperreports_compiler_expression_javascript: "false"
+      
+      # Configurações de fontes e sistema
+      net_sf_jasperreports_system_font_dir: "/usr/share/fonts/truetype/dejavu"
+      net_sf_jasperreports_extension_registry_factory_fonts: ""
+      
+      # Diretórios temporários
+      net_sf_jasperreports_compile_temp: "/tmp"
+      net_sf_jasperreports_export_temp: "/tmp"
+      
+    volumes:
+      # Fontes do sistema host - IMPORTANTE para relatórios
+      - /usr/share/fonts:/usr/share/fonts:ro
+      # Diretório temporário para JasperReports
+      - jasperreports-tmp:/tmp
+      # Volume para relatórios temporários
+      - jasperreports-reports:/app/reports
+      
+    # Configurações de segurança
+    security_opt:
+      - no-new-privileges:true
+    
+    # Configurações de deploy no Swarm
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      placement:
+        max_replicas_per_node: 1
+        preferences:
+          - spread: node.id
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api-report-jaspersoft.rule=Host(`hjaspersoft.verderp.com.br`)"
+        - "traefik.http.routers.api-report-jaspersoft.entrypoints=web"
+        - "traefik.http.services.api-report-jaspersoft.loadbalancer.server.port=8013"
+        - "traefik.http.services.api-report-jaspersoft.loadbalancer.healthcheck.path=/actuator/health"
+        - "traefik.http.services.api-report-jaspersoft.loadbalancer.healthcheck.interval=30s"
+    
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8013/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+      
+    networks:
+      - traefik_proxy
+
+# Volumes persistentes
+volumes:
+  jasperreports-tmp:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /tmp/jasperreports
+  jasperreports-reports:
+    driver: local
+
+networks:
+  traefik_proxy:
+    external: true

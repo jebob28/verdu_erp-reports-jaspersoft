@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fontFamilies>
+    <fontFamily name="DejaVu Sans">
+        <normal>/usr/share/fonts/ttf-dejavu/DejaVuSans.ttf</normal>
+        <bold>/usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf</bold>
+        <italic>/usr/share/fonts/ttf-dejavu/DejaVuSans-Oblique.ttf</italic>
+        <boldItalic>/usr/share/fonts/ttf-dejavu/DejaVuSans-BoldOblique.ttf</boldItalic>
+        <pdfEmbedded>true</pdfEmbedded>
+    </fontFamily>
+</fontFamilies>
